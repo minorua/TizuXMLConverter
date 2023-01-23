@@ -74,6 +74,39 @@ body {
     border-color: skyblue;
 }
 
+#map {
+    position: absolute;
+    left: 45%;
+    top: 45%;
+    width: 10%;
+    height: 10%;
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+}
+
+#map.open {
+
+    left: 5%;
+    top: 0%;
+    width: 90%;
+    height: 100%;
+
+    background-color: white;
+    display: flex;
+}
+
+#close {
+    display: none;
+    position: absolute;
+    right: 5%;
+    top: 0;
+
+    cursor: pointer;
+}
+
 #progress {
     display: none;
     position: absolute;

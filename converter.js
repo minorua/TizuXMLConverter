@@ -30,8 +30,14 @@
         dz.style.display = "none";
         loadFiles(e.dataTransfer.files);
     });
-})();
 
+    const closeBtn = document.getElementById("close");
+    closeBtn.addEventListener("click", () => {
+        document.getElementById("map").classList.remove("open");
+        closeBtn.style.display = "none";
+    });
+
+})();
 
 function loadFiles(files) {
 
@@ -82,7 +88,7 @@ function loadFiles(files) {
             TZU_FEATURE_GROUPS.forEach((group) => {
 
                 const tr = document.createElement("tr");
-                tr.innerHTML = "<td>" + group.name + "</td><td>" + loader.stats[group.name] + "</td>";
+                tr.innerHTML = "<td>" + group.name + "</td><td>" + (loader.stats[group.name] || 0) + "</td>";
                 table.appendChild(tr);
 
                 const td = document.createElement("td");
@@ -90,7 +96,7 @@ function loadFiles(files) {
 
                 if (loader.stats[group.name]) {
 
-                    const button = document.createElement("button");
+                    let button = document.createElement("button");
                     button.innerHTML = "保存";
                     button.addEventListener("click", () => {
 
@@ -109,6 +115,21 @@ function loadFiles(files) {
                     });
 
                     td.appendChild(button);
+
+                    if (typeof ol !== undefined) {
+
+                        button = document.createElement("button");
+                        button.innerHTML = "地図表示";
+                        button.addEventListener("click", () => {
+
+                            const jsonObject = loader.data[group.name];
+                            showMap(jsonObject);
+
+                        });
+
+                        td.appendChild(button);
+
+                    }
 
                 }
 
@@ -129,5 +150,49 @@ function loadFiles(files) {
         }, 2000);
 
     });
+
+}
+
+
+let map, currentJSONLayer;
+
+function showMap(jsonObject) {
+
+    if (!map) {
+
+        ol.proj.useGeographic();
+
+        map = new ol.Map({
+
+            layers: [
+                new ol.layer.Tile({source: new ol.source.OSM()})
+            ],
+            view: new ol.View(),
+            target: "map"
+
+        });
+
+    }
+    else {
+        map.removeLayer(currentJSONLayer);
+    }
+
+    const source = new ol.source.Vector({
+
+        features: new ol.format.GeoJSON().readFeatures(jsonObject)
+
+    });
+
+    currentJSONLayer = new ol.layer.Vector({source: source});
+    map.addLayer(currentJSONLayer);
+
+    const mapElem = document.getElementById("map");
+    mapElem.classList.add("open");
+
+    const closeBtn = document.getElementById("close");
+    closeBtn.style.display = "block";
+
+    const extent = source.getExtent();
+    map.getView().fit(extent, map.getSize());
 
 }
