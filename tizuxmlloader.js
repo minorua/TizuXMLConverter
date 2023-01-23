@@ -96,7 +96,7 @@ class TizuXMLLoader {
 
         const readXY = (elem) => {
 
-            return [parseFloat(read(elem, "X")), parseFloat(read(elem, "Y"))];
+            return [parseFloat(read(elem, "Y")), parseFloat(read(elem, "X"))];
 
         };
 
@@ -161,6 +161,8 @@ class TizuXMLLoader {
             const epsg = 6668 + parseInt(coordinateSystem.substr(4));
             const projStr = "EPSG:" + epsg;
 
+            console.log(projStr);
+
             transformXY = (coords) => {
 
                 return proj4(projStr).inverse(coords);      // to WGS84 lonlat
@@ -180,23 +182,23 @@ class TizuXMLLoader {
 
             id = elem.getAttribute("id");
 
-            if (elem.tagName == "GM_Point") {
+            if (elem.tagName == "zmn:GM_Point") {
 
                 entities[id] = transformXY(readXY(elem));
 
             }
-            else if (elem.tagName == "GM_Curve") {
+            else if (elem.tagName == "zmn:GM_Curve") {
 
                 coordinates = [];
 
-                for (column of elem.querySelector("GM_PointArray").children) {   // e: <GM_PointArray.column>
+                for (column of elem.getElementsByTagName("zmn:GM_LineString.controlPoint")[0].children) {   // e: <GM_PointArray.column>
                     e = column.children[0];
-                    if (e.tagName == "GM_Point.position") {
+                    if (e.tagName == "zmn:GM_Position.direct") {
 
                         coordinates.push(transformXY(readXY(e)));
 
                     }
-                    else if (e.tagName == "GM_PointRef") {
+                    else if (e.tagName == "zmn:GM_Position.indirect") {
 
                         i = e.children[0].getAttribute("idref");
                         coordinates.push(entities[i]);
@@ -210,11 +212,11 @@ class TizuXMLLoader {
                 entities[id] = coordinates;
 
             }
-            else if (elem.tagName == "GM_OrientableCurve") {
+            else if (elem.tagName == "zmn:GM_OrientableCurve") {
 
-                coordinates = entities[elem.getElementsByTagName("GM_OrientablePrimitive.primitive")[0].getAttribute("idref")];
+                coordinates = entities[elem.getElementsByTagName("zmn:GM_OrientablePrimitive.primitive")[0].getAttribute("idref")];
 
-                if (read(elem, "GM_OrientablePrimitive.orientation") == "-") {
+                if (read(elem, "zmn:GM_OrientablePrimitive.orientation") == "-") {
 
                     coordinates = [...coordinates].reverse();
 
@@ -223,15 +225,15 @@ class TizuXMLLoader {
                 entities[id] = coordinates;
 
             }
-            else if (elem.tagName == "GM_Surface") {
+            else if (elem.tagName == "zmn:GM_Surface") {
 
                 e = elem.querySelector("GM_SurfaceBoundary").children;
 
-                coordinates = [joinCurves(e[0])];
+                coordinates = [joinCurves(e[0].children[0])];
 
                 for (i = 1; i < e.length; i++) {
 
-                    coordinates.push(joinCurves(e[i]));
+                    coordinates.push(joinCurves(e[i].children[0]));
 
                 }
 
