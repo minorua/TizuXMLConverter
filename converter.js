@@ -39,7 +39,10 @@
 
 })();
 
+
 function loadFiles(files) {
+
+    const loaders = [];
 
     const output = document.getElementById("output");
     const progress = document.getElementById("progress"),
@@ -78,68 +81,34 @@ function loadFiles(files) {
         }).then(() => {
 
             const p = document.createElement("p");
-            p.innerHTML = file.name + " を読み込みました.";
             output.appendChild(p);
+            if (loader.lastError) {
 
-            const table = document.createElement("table");
-            table.innerHTML = "<tr><th>種類</th><th>地物数</th><th>操作</th></tr>";
-            output.appendChild(table);
+                p.innerHTML = file.name + ": " + loader.lastError.msg;
+                return;
 
-            TZU_FEATURE_GROUPS.forEach((group) => {
+            }
 
-                const tr = document.createElement("tr");
-                tr.innerHTML = "<td>" + group.name + "</td><td>" + (loader.stats[group.name] || 0) + "</td>";
-                table.appendChild(tr);
+            loaders.push(loader);
 
-                const td = document.createElement("td");
-                tr.appendChild(td);
+            p.innerHTML = file.name + " を読み込みました.";
 
-                if (loader.stats[group.name]) {
-
-                    let button = document.createElement("button");
-                    button.innerHTML = "保存";
-                    button.addEventListener("click", () => {
-
-                        const json = JSON.stringify(loader.data[group.name], null, 2)
-                        const blob = new Blob([json], {type: "application/json"});
-
-                        const e = document.createElement("a");
-                        document.body.appendChild(e);
-
-                        e.href = window.URL.createObjectURL(blob);
-                        e.download = file.name.split(".")[0] + "_" + group.name + ".json";
-                        e.click();
-
-                        document.body.removeChild(e);
-
-                    });
-
-                    td.appendChild(button);
-
-                    if (typeof ol !== undefined) {
-
-                        button = document.createElement("button");
-                        button.innerHTML = "地図表示";
-                        button.addEventListener("click", () => {
-
-                            const jsonObject = loader.data[group.name];
-                            showMap(jsonObject);
-
-                        });
-
-                        td.appendChild(button);
-
-                    }
-
-                }
-
-            });
-
+            output.appendChild(createTable([loader]));
         });
 
     });
 
     result = result.then(() => {
+
+        if (loaders.length > 1) {
+
+            const p = document.createElement("p");
+            p.innerHTML = loaders.length + "個のファイルを読み込みました.";
+            output.appendChild(p);
+
+            output.appendChild(createTable(loaders));
+
+        }
 
         setStatusText("Completed!");
         setProgress(1);
@@ -150,6 +119,95 @@ function loadFiles(files) {
         }, 2000);
 
     });
+
+}
+
+
+function mergeJsonObjects(loaders, groupName) {
+
+    data = {
+        type: "FeatureCollection",
+        features: []
+    };
+
+    for (const loader of loaders) {
+
+        data.features.push(...loader.data[groupName].features);
+
+    }
+
+    return data;
+
+}
+
+
+function createTable(loaders) {
+
+    const table = document.createElement("table");
+    table.innerHTML = "<tr><th>種類</th><th>地物数</th><th>操作</th></tr>";
+
+    TZU_FEATURE_GROUPS.forEach((group) => {
+
+        let count = 0;
+        for (const loader of loaders) {
+
+            count += loader.stats[group.name] || 0;
+
+        }
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + group.name + "</td><td>" + count + "</td>";
+        table.appendChild(tr);
+
+        const td = document.createElement("td");
+        tr.appendChild(td);
+
+        if (count) {
+
+            let button = document.createElement("button");
+            button.innerHTML = "保存";
+            button.addEventListener("click", () => {
+
+
+                const json = JSON.stringify(mergeJsonObjects(loaders, group.name), null, 2);
+                const blob = new Blob([json], {type: "application/json"});
+
+                const e = document.createElement("a");
+                document.body.appendChild(e);
+
+                e.href = window.URL.createObjectURL(blob);
+
+                const basename = (loaders.length > 1) ? "merged" : loaders[0].filename.split(".")[0];
+                e.download = basename + "_" + group.name + ".json";
+
+                e.click();
+
+                document.body.removeChild(e);
+
+            });
+
+            td.appendChild(button);
+
+            if (typeof ol !== undefined) {
+
+                button = document.createElement("button");
+                button.innerHTML = "地図表示";
+                button.addEventListener("click", () => {
+
+                    const jsonObject = mergeJsonObjects(loaders, group.name);
+                    showMap(jsonObject);
+
+                });
+
+                td.appendChild(button);
+
+            }
+
+        }
+
+    });
+
+    return table;
 
 }
 

@@ -79,6 +79,8 @@ class TizuXMLLoader {
 
     constructor() {
 
+        this.lastError = null;
+
     }
 
     load(xmlStr, print) {
@@ -141,7 +143,10 @@ class TizuXMLLoader {
 
         const root = dom.documentElement;
         if (root.tagName != "地図") {
-            return new LoadError("法務省地図XMLファイルではありません.");
+
+            this.lastError = new LoadError("法務省地図XMLファイルではありません.");
+            return;
+
         }
 
         const mapName = read(root, ":scope > 地図名");
@@ -316,6 +321,8 @@ class TizuXMLLoader {
 
                 const xmlStr = e.target.result;
                 const data = _this.load(xmlStr);
+
+                _this.filename = file.name;
 
                 resolve();
 
